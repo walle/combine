@@ -9,7 +9,7 @@ import (
 	"github.com/walle/combine"
 )
 
-const VERSION = "0.2.0"
+const VERSION = "0.2.1"
 
 func main() {
 	flag.Usage = func() {
@@ -24,6 +24,7 @@ Options:
 	}
 
 	minify := flag.String("t", "", "Minify result, the type of file to minify, [js/css]")
+	less := flag.Bool("l", false, "Compile the input using less")
 	inputFile := flag.String("i", "", "Input file, the template to use as input, defaults to stdin")
 	outputFile := flag.String("o", "", "Output file, the path to write the output to, defaults to stdout")
 	baseDir := flag.String("d", "", "Base directory, the path files are relatively read from. Only used if reading input from stdin, if input file is given files are read relatively to the input file.")
@@ -70,6 +71,14 @@ Options:
 	errors := combiner.Combine(includer)
 	if len(errors) > 0 {
 		for _, err := range errors {
+			fmt.Fprintf(os.Stderr, "%s\n", err)
+		}
+	}
+
+	if *less {
+		less := combine.NewLessDecorator()
+		err := less.Decorate(combiner)
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", err)
 		}
 	}
