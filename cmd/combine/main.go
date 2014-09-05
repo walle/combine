@@ -9,7 +9,7 @@ import (
 	"github.com/walle/combine"
 )
 
-const VERSION = "0.1.0"
+const VERSION = "0.2.0"
 
 func main() {
 	flag.Usage = func() {
@@ -45,36 +45,19 @@ Options:
 	var combiner combine.Combiner
 
 	// Route the flags to the correct combiner
-	if strings.ToLower(*minify) == combine.JS || strings.ToLower(*minify) == combine.CSS {
-		if *inputFile != "" && *outputFile != "" {
-			combiner = combine.NewYuiMinifyFileCombiner(*inputFile, *outputFile, *minify)
-		} else if *inputFile != "" && *outputFile == "" {
-			combiner = combine.NewYuiMinifyFileToStreamCombiner(*inputFile, os.Stdout, *minify)
-		} else if *baseDir != "" {
-			if *inputFile == "" && *outputFile != "" {
-				combiner = combine.NewYuiMinifyStreamToFileCombiner(os.Stdin, *outputFile, *baseDir, *minify)
-			} else {
-				combiner = combine.NewYuiMinifyStreamCombiner(os.Stdin, os.Stdout, *baseDir, *minify)
-			}
+	if *inputFile != "" && *outputFile != "" {
+		combiner = combine.NewFileCombiner(*inputFile, *outputFile)
+	} else if *inputFile != "" && *outputFile == "" {
+		combiner = combine.NewFileToStreamCombiner(*inputFile, os.Stdout)
+	} else if *baseDir != "" {
+		if *inputFile == "" && *outputFile != "" {
+			combiner = combine.NewStreamToFileCombiner(os.Stdin, *outputFile, *baseDir)
 		} else {
-			fmt.Fprintf(os.Stderr, "Base directory (-d) is required when reading from stdin\n")
-			flag.Usage()
+			combiner = combine.NewStreamCombiner(os.Stdin, os.Stdout, *baseDir)
 		}
 	} else {
-		if *inputFile != "" && *outputFile != "" {
-			combiner = combine.NewFileCombiner(*inputFile, *outputFile)
-		} else if *inputFile != "" && *outputFile == "" {
-			combiner = combine.NewFileToStreamCombiner(*inputFile, os.Stdout)
-		} else if *baseDir != "" {
-			if *inputFile == "" && *outputFile != "" {
-				combiner = combine.NewStreamToFileCombiner(os.Stdin, *outputFile, *baseDir)
-			} else {
-				combiner = combine.NewStreamCombiner(os.Stdin, os.Stdout, *baseDir)
-			}
-		} else {
-			fmt.Fprintf(os.Stderr, "Base directory (-d) is required when reading from stdin\n")
-			flag.Usage()
-		}
+		fmt.Fprintf(os.Stderr, "Base directory (-d) is required when reading from stdin\n")
+		flag.Usage()
 	}
 
 	templateIncluder := &combine.TemplateIncluder{}
@@ -87,6 +70,14 @@ Options:
 	errors := combiner.Combine(includer)
 	if len(errors) > 0 {
 		for _, err := range errors {
+			fmt.Fprintf(os.Stderr, "%s\n", err)
+		}
+	}
+
+	if strings.ToLower(*minify) == combine.JS || strings.ToLower(*minify) == combine.CSS {
+		yui := combine.NewYuiMinifyDecorator(*minify)
+		err := yui.Decorate(combiner)
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n", err)
 		}
 	}
