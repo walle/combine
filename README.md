@@ -118,6 +118,13 @@ if len(errors) > 0 {
   log.Println(err)
 }
 
+// Uncomment this part if you want the output to be minified
+// yui := combine.NewYuiMinifyDecorator("css")
+// err := yui.Decorate(combiner)
+//  if err != nil {
+//    log.Println(err)
+//  }
+
 err = combiner.Write()
 if err != nil {
   log.Println(err)
